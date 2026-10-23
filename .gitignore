@@ -4,3 +4,8 @@ legacy/
 extension/_metadata/
 *.pem
 *.key
+
+# build artifacts
+*.crx
+*.xpi
+*-mv3.zip
