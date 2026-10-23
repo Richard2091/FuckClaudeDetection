@@ -1,13 +1,12 @@
-﻿# desktop/ — Claude Code Desktop 伪装（预留）
+﻿# desktop/ — Claude Desktop 环境一致性工具（规划占位）
 
-本目录为 Claude Code Desktop（Electron 应用）伪装工具的预留设计空间，尚未实现。
+本目录为 Claude Desktop（Electron 桌面应用）的本地环境配置工具预留目录，尚未实现。
 
-设计草案见 [../ROADMAP.md](../ROADMAP.md#规划中claude-code-desktop-伪装desktop)。
+设计方向见 [../ROADMAP.md](../ROADMAP.md)：
 
-要点：
-- Electron 启动参数（--lang 等）
-- 环境变量注入（TZ / 代理）
-- 时区欺骗层可行性评估
-- 与 extension 三端配置一致
+- 启动参数：Electron 支持的 Chromium 开关（如 `--lang`）
+- 环境变量注入：启动前设置 TZ 与代理变量
+- 时区伪装层可行性评估
+- 共享配置：规划中由 extension、CLI 与 desktop 共享同一套时区/区域目标档案（该能力尚未实现）
 
-实现落地时，本 README 将替换为完整使用说明。
+实现落地前，本目录不应被理解为目标服务的绕过指南；规划仅涉及本地运行环境配置。

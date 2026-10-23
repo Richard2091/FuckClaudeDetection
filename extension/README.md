@@ -1,66 +1,79 @@
-﻿# Fuck Claude Detection - 浏览器扩展 v3.0
+# 扩展技术说明（v2.4.0）
 
-纯扩展方式覆盖 fuck-claude.vercel.app 检测站 10 项信号，不改动本机任何设置。经双代理交叉审核整改（覆盖矩阵 + 真实性评级）。
+本扩展基于 [LinXiaoTao/FuckClaude](https://github.com/LinXiaoTao/FuckClaude) 的公开检测信号模型进行验证，不修改操作系统设置。功能开关与使用说明见根 [README.md](../README.md#功能)，本节描述实现映射、覆盖矩阵与验证口径。
 
-## 验证数据（对照检测站源码）
+## 测试环境与方法
 
-- **客户端扫描：1 / 100**（检测站对每项贡献逐项取整：emoji Windows 0.4×3=1.2 → 显示 1）
-- **服务端 /api/check：约 2 / 100**（仅测 62 权重信号并归一化）
-- 开启"UA 平台伪装"增强后，服务端口径可将 emoji 归为 Apple（0.25×3=0.75 → 显示 1，客户端显示分不变，但服务端 UA/UA-CH 一致性提升）
+| 项目 | 值 |
+|------|-----|
+| 检测器 | [LinXiaoTao/FuckClaude](https://github.com/LinXiaoTao/FuckClaude)，commit `bb0015805a4a92a7ed9221693219a69315123aee` |
+| 浏览器 | Chrome 桌面版（具体构建号未在验证时记录，方法可复现） |
+| 操作系统 | Windows 10/11 |
+| 网络出口 | 美国代理 |
+| 扩展配置 | 目标档案 America/New_York + en-US；全部开关开启；UA 平台增强关闭 |
+| 方法 | 检测器客户端完整扫描 + `/api/check` 服务端接口 |
 
-## 覆盖矩阵（对照检测站源码 signals.ts）
+## 验证数据
 
-| 信号 | 权重 | 扩展对策 | 覆盖 |
-|------|------|---------|------|
-| timezone | 24 | Intl.DateTimeFormat 构造器注入 + resolvedOptions 强制 | ✅ |
-| language | 18 | navigator.languages hook + DNR 改写 Accept-Language | ✅ |
-| fonts | 14 | Canvas measureText 剔除（55 项名单，大小写无关） | ✅ |
-| vendorFonts | 10 | 同上（完整覆盖检测站 16 项厂商字体） | ✅ |
-| webrtcLeak | 10 | 独立原型链 + iceServers 清空 + 候选拦截 + getConfiguration 一致 | ✅ |
-| cnBrowser | 8 | 原生 Chrome 无匹配；UA 平台伪装（增强）可覆盖中国浏览器 UA | ✅ |
-| deviceVendor | 6 | 同上（UA-CH 高熵值同步伪装） | ✅ |
-| intlLocale | 4 | Intl 构造器真实 locale 注入（行为与报告一致） | ✅ |
-| timezoneOffset | 3 | getTimezoneOffset 按每个 Date 时间戳动态计算（含夏令时） | ✅ |
-| emoji | 3 | 取决于平台：Windows 0.4 / Apple 0.25 / Linux 0.5；UA 平台伪装（增强）可归为 Apple 并提升 UA-CH 一致性；逐项取整规则下各平台显示分均为 1 | ⚠ |
+| 口径 | 结果 |
+|------|-----:|
+| 客户端完整扫描 | **1 / 100** |
+| 服务端 `/api/check` | **约 2 / 100** |
 
-## 功能开关
+取整规则：公开检测器对每项贡献先 `Math.round(score × weight)` 再累加（`detect.ts`）。
 
-- 时区伪装 / 浏览器语言 / 中文字体拦截 / WebRTC 拦截 / Intl 区域 / 请求语言伪装
-- **UA 平台伪装**（增强，默认关）：伪装 macOS 平台（JS 层 + 网络层同步），开启后 cnBrowser/deviceVendor 在国产 UA 环境下也受保护
-- 代理时区自动检测（ipwho.is），支持港澳/大陆时区风险提示
-- 总开关 = 一键全开/全关（与子开关实时联动，无中间态）
+- emoji 信号：Windows 0.4×3=1.2 → 显示 **1**；Linux 0.5×3=1.5 → 显示 **2**；Apple 0.25×3=0.75 → 显示 **1**
+- 服务端仅统计 62 权重信号并归一化
 
-## 已知边界（诚实声明）
+## 覆盖矩阵
 
-- **Web Worker / Service Worker**：独立 JS 环境无法被 content script 覆盖（检测站当前不使用，未来对抗面）
-- **渲染层指纹**：拦截 measureText 探测层，不改变真实文本渲染使用的字体
-- **IP 地理信号**（x-vercel-ip-timezone/country）：由出口 IP 决定，必须依靠代理
-- **TLS / HTTP2 指纹**：需代理层解决
-- **hook 可观察性**：MAIN world hook 天然可被页面检测（current 站点不做）
+覆盖类型：**✅ 默认覆盖**（开关开启即生效）/ **⚠ 条件或部分覆盖**（结果取决于运行平台、原生环境或增强开关）/ **⚙ 增强后覆盖**（需开启 UA 平台伪装）/ **— 原生无风险**（普通桌面 Chrome 环境无匹配）。"— / ⚙"表示普通桌面 Chrome 原生环境无匹配，非原生或目标环境需启用 UA 平台伪装。
 
-## 安装
+| 信号 | 权重 | 检测 API | 扩展对策 | 覆盖 |
+|------|-----:|---------|---------|:---:|
+| timezone | 24 | `Intl.DateTimeFormat().resolvedOptions().timeZone` | 构造器注入 timeZone；resolvedOptions 强制返回 | ✅ |
+| language | 18 | `navigator.languages` / `language`（scoreLanguages 判定） | getter 返回冻结副本 `['en-US', 'en']` | ✅ |
+| fonts | 14 | Canvas `measureText` 探测 19 简体 + 8 繁体字体 | measureText 剔除 + document.fonts.check 拦截（55 项名单，大小写无关） | ✅ |
+| vendorFonts | 10 | Canvas `measureText` 探测 16 项厂商字体 | 同上通道覆盖全部 16 项 | ✅ |
+| webrtcLeak | 10 | RTCPeerConnection + STUN + onicecandidate 收集候选 | 独立原型链 + iceServers 清空 + 候选拦截 + getConfiguration 一致化 | ✅ |
+| cnBrowser | 8 | UA + UA-CH brands 正则 | 原生 Chrome 无匹配；非原生 UA 环境需启用 UA 平台伪装 | — / ⚙ |
+| deviceVendor | 6 | UA-CH `getHighEntropyValues(['model','platform','platformVersion'])` | 原生桌面 Chrome 无匹配；国产设备环境需启用 UA 平台伪装 | — / ⚙ |
+| intlLocale | 4 | `resolvedOptions().locale` | Intl 构造器注入目标 locale；resolvedOptions 强制返回 | ✅ |
+| timezoneOffset | 3 | `new Date().getTimezoneOffset() === -480` | 按目标时区对每个时间戳动态计算（非 -480 即 0 分） | ✅ |
+| emoji | 3 | `navigator.platform` + `userAgent` 推断厂商 | Windows 0.4 / Apple 0.25 / Linux 0.5；UA 平台伪装可将平台归为 Apple：Windows 的 emoji 显示分保持 1；Linux 通常由 2 降至 1；Apple 保持 1 | ⚠ |
 
-1. `chrome://extensions/` → 开发者模式 → 加载已解压的扩展程序
-2. 选择本目录
-3. 点开插件栏盾牌图标使用
+## 实现架构
+
+```
+popup ──chrome.storage──▶ content-bridge（ISOLATED）──postMessage──▶ content.js（MAIN world hooks）
+```
+
+- MAIN world hook 直接替换页面可见的浏览器 API；DNR 同步改写请求头（Accept-Language / 可选 UA 与 Sec-CH-UA 系列）
+- 配置推送带一次性 nonce 防重放；DNR 动态规则随开关实时同步
+
+## 权限说明
+
+| 权限 / 声明 | 用途 |
+|-----------|------|
+| `storage` | 配置持久化（chrome.storage.local） |
+| `declarativeNetRequest` + `<all_urls>` | 改写 Accept-Language / 可选 UA 与 Sec-CH-UA 请求头 |
+| content scripts（MAIN world，所有站点） | 页面环境注入 |
+| `https://ipwho.is/` | 代理时区检测的外部查询目标 |
+
+## 已知限制
+
+- **页面主环境注入方式不覆盖 Worker**：Dedicated / Shared / Service Worker 属于独立执行环境，当前公开检测器未使用该路径；后续可评估扩展支持范围
+- **UA 平台伪装仅改变可观察的平台标识与 UA-CH 字段**，不改变渲染特征、平台 API、硬件指纹或完整系统行为；网络层 Sec-CH-UA 头存在固定的版本基准（当前 Chrome 131），可能与实际浏览器主版本存在差异
+- **MAIN world hook 暴露在页面环境中**：页面理论上可通过原型链、函数属性或 toString 观察修改痕迹
+- **字体拦截作用于查询通道**（measureText / document.fonts.check）：真实文本渲染仍使用系统中文字体；Canvas 像素哈希、DOM 实测宽度等渲染级检测不在当前覆盖范围
 
 ## 隐私说明
 
-- 所有伪装在浏览器本地生效，不修改系统设置
-- 代理时区检测访问 ipwho.is 查询出口 IP 地理（不发送任何个人数据）
-- 检测结果零上传
+- 扩展配置保存在 chrome.storage.local；检测结果仅在本地 Popup 与页面之间交换，不上传
+- 代理时区检测会向 [ipwho.is](https://ipwho.is/) 发起 HTTPS 请求；该请求包含普通网络请求元数据，响应包含出口 IP 的地理与时区信息
+- WebRTC 拦截关闭且打开面板自查时，扩展会向默认 STUN 服务器发起探测（用于本地判断候选地址泄漏）；拦截开启时不产生该请求
 
-## 设计原则：Sub 参数展示规范
+## 第三方来源
 
-每个伪装功能行下方的参数文本遵循统一语义：
-
-- **展示恒定值**：页面此刻实际生效的值（通过页面内 selfCheck 读取）
-- **功能开启** → 展示伪装值（即伪装后的当前值，如时区伪装开 → `America/New_York`）
-- **功能关闭** → 展示真实值（如时区伪装关 → 系统真实时区）
-- **纯值展示**：不加"当前："、"伪装："等前缀文案
-- **异常用颜色**：参数与目标不一致时整行变红，不使用 ✓/✗ 符号
-- **无法读取时**：显示"未注入 · 请刷新页面后重试"（真实值只能由页面内 content script 读取）
-
-请求头类功能（Accept-Language）特殊说明：请求头对页面 JS 不可见，开启态展示改写后的请求头语言（与配置一致）；关闭态展示浏览器实际语言（以 navigator.languages 近似）。
-
-WebRTC 特殊说明：展示分两层——防护层状态（拦截是否生效）与网络层真实值（泄漏的 IP 候选）。拦截开启时页面探测结果必为无泄漏，此时展示探测结论。
+- 白色 Claude 星芒图形路径参考自 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标，本项目调整了颜色与尺寸
+- Claude 名称与相关商标归 Anthropic 所有；本项目与其无隶属关系

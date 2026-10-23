@@ -37,6 +37,8 @@
 2. 选择 `extension/` 目录
 3. 点开插件栏盾牌图标使用
 
+浏览器扩展清单中的当前名称仍为 Fuck Claude Detection；文档展示名为"统一指纹守卫"。
+
 需要支持 Manifest V3、declarativeNetRequest 和 MAIN world content scripts 的 Chromium 浏览器（清单声明最低 Chrome 111）。安装时浏览器会提示"读取和更改您在所有网站上的数据"——用于页面环境注入与请求头改写，详见[权限说明](extension/README.md#权限说明)。
 
 ## 文档
@@ -50,7 +52,7 @@
 ## 第三方声明
 
 - 白色 Claude 星芒路径参考自 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标（本项目中按需调整了颜色与尺寸）
-- 白色 Claude 星芒图形路径参考自 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标，本项目调整了颜色与尺寸
+- 白色 Claude 星芒图形路径复用自 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标（MIT License），本项目仅调整颜色与尺寸
 - Claude 名称与相关商标归 Anthropic 所有；本项目与其无隶属关系
 
 ## 致谢
