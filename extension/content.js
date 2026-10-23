@@ -271,14 +271,32 @@
   })();
 
   // ---------- 9. UA 平台伪装（可选增强，默认关） ----------
-  const MAC_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
-  try {
-    const macUAD = {
+  // 从真实 UA 动态推导 Mac UA：保留真实 Chrome 主版本，仅替换平台段（避免版本脱节）
+  function deriveMacUa(realUa) {
+    const m = /(Chrome\/(\d+)[\d.]*)/i.exec(realUa || "");
+    const chromeVer = m ? m[1] : "Chrome/131.0.0.0";
+    const major = m ? m[2] : "131";
+    return {
+      ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) " + chromeVer + " Safari/537.36",
       brands: [
-        { brand: "Google Chrome", version: "131" },
-        { brand: "Chromium", version: "131" },
+        { brand: "Google Chrome", version: major },
+        { brand: "Chromium", version: major },
         { brand: "Not_A Brand", version: "24" }
       ],
+      fullVersionList: [
+        { brand: "Google Chrome", version: m ? m[1] + ".0.0.0" : "131.0.0.0" },
+        { brand: "Chromium", version: m ? m[1] + ".0.0.0" : "131.0.0.0" },
+        { brand: "Not_A Brand", version: "24.0.0.0" }
+      ],
+      uaFullVersion: m ? m[1] + ".0.0.0" : "131.0.0.0"
+    };
+  }
+  const realUaNow = origUserAgentDesc.get.call(navigator);
+  const MAC_UA_INFO = deriveMacUa(realUaNow);
+  const MAC_UA = MAC_UA_INFO.ua;
+  try {
+    const macUAD = {
+      brands: MAC_UA_INFO.brands,
       mobile: false,
       platform: "macOS",
       getHighEntropyValues: function (hints) {
@@ -288,12 +306,8 @@
           model: "",
           platform: "macOS",
           platformVersion: "14.5.0",
-          uaFullVersion: "131.0.6778.86",
-          fullVersionList: [
-            { brand: "Google Chrome", version: "131.0.6778.86" },
-            { brand: "Chromium", version: "131.0.6778.86" },
-            { brand: "Not_A Brand", version: "24.0.0.0" }
-          ],
+          uaFullVersion: MAC_UA_INFO.uaFullVersion,
+          fullVersionList: MAC_UA_INFO.fullVersionList,
           wow64: false
         };
         const out = {};
@@ -418,6 +432,23 @@
   }
   patchMeasure(window.CanvasRenderingContext2D && window.CanvasRenderingContext2D.prototype);
   patchMeasure(window.OffscreenCanvasRenderingContext2D && window.OffscreenCanvasRenderingContext2D.prototype);
+
+  // document.fonts.check()：查询中文字体时返回 false（字体检测第二通道）
+  try {
+    if (document.fonts && typeof document.fonts.check === "function") {
+      const origCheck = document.fonts.check.bind(document.fonts);
+      const patchedCheck = function check(fontSpec, text) {
+        try {
+          if (!fontsActive()) return origCheck(fontSpec, text);
+          const spec = String(fontSpec || "");
+          if (QUICK_REGEX.test(spec)) return false;
+        } catch (e) {}
+        return origCheck(fontSpec, text);
+      };
+      keepName(patchedCheck, "check");
+      document.fonts.check = patchedCheck;
+    }
+  } catch (e) {}
 
   // ---------- 11. 消息通道（带一次性 nonce 防重放） ----------
   const seenNonces = new Set();
