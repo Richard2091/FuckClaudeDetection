@@ -192,6 +192,10 @@ body {
 .feature-sub.copied { color: var(--green); animation: none; }
 .feature-sub.bad { color: var(--red); }
 .feature-sub.bad:hover { color: var(--red); }
+.feature-sub.status-error,
+.feature-sub.status-error:hover { color: var(--red); }
+.feature-sub.status-error.copied,
+.feature-sub.status-error.copied:hover { color: var(--green); }
 .feature-sub.loading { animation: subPulse 1s ease infinite; }
 .feature-sub.loading::before { content: "读取中..."; }
 @keyframes subPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
