@@ -52,7 +52,7 @@
 ## 第三方声明
 
 - 白色 Claude 星芒路径参考自 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标（本项目中按需调整了颜色与尺寸）
-- 白色 Claude 星芒图形路径复用自 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标（MIT License），本项目仅调整颜色与尺寸
+- 盾形轮廓与整体构图由本项目设计；白色 Claude 星芒图形路径复用自 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标（MIT License），本项目仅调整颜色与尺寸
 - Claude 名称与相关商标归 Anthropic 所有；本项目与其无隶属关系
 
 ## 致谢
