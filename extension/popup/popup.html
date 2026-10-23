@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Fuck Claude Detection</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app">
+  <header class="header">
+    <div class="brand">
+      <img class="brand-logo" src="../icons/icon48.png" alt="logo">
+      <div class="brand-text">
+        <div class="brand-title">Fuck Claude Detection</div>
+        <div class="brand-sub">统一指纹守卫 v2.4</div>
+      </div>
+    </div>
+    <label class="switch master" id="masterSwitch" title="一键开关所有伪装项">
+      <input type="checkbox" id="masterCheckbox">
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <main id="mainBody">
+    <section class="section" id="tzSection">
+      <h2 class="section-title">代理时区</h2>
+      <div class="tz-current">
+        <span class="tz-label">目标时区</span>
+        <span class="tz-value-wrap">
+          <span class="tz-value" id="currentTz">America/New_York</span>
+          <button class="tz-refresh" id="refreshTzBtn" title="检测代理时区并自动应用">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+              <path d="M20 11a8 8 0 1 0-2.3 6.3"/>
+              <path d="M20 5v6h-6" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </span>
+      </div>
+    </section>
+
+    <section class="section" id="featuresSection">
+      <h2 class="section-title">伪装功能</h2>
+      <div id="featureList"></div>
+    </section>
+  </main>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

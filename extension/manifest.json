@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Fuck Claude Detection",
+  "version": "2.4.0",
+  "description": "一键伪装浏览器时区、语言、字体与 WebRTC 指纹，自动匹配代理出口时区，降低 Claude 区域风控风险分。所有伪装在浏览器内生效，不修改系统设置（代理时区检测需访问 ipwho.is）。",
+  "permissions": ["declarativeNetRequest", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "fc_ruleset",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-bridge.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Fuck Claude Detection",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "minimum_chrome_version": "111"
+}

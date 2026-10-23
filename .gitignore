@@ -1,0 +1,4 @@
+scripts/
+legacy/
+*.log
+extension/_metadata/
