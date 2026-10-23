@@ -20,6 +20,8 @@
       webrtc: true,
       intlLocale: true,
       uaPlatform: false,
+      uachHeaders: false,
+      intlExtended: false,
       acceptLanguageHeader: true
     }
   };

@@ -16,7 +16,9 @@ const DEFAULT_CONFIG = {
     webrtc: true,
     intlLocale: true,
     acceptLanguageHeader: true,
-    uaPlatform: false
+    uaPlatform: false,
+    uachHeaders: false,
+    intlExtended: false
   }
 };
 
@@ -26,6 +28,8 @@ const FEATURES = [
   { key: "fonts", name: "中文字体拦截" },
   { key: "webrtc", name: "WebRTC 拦截" },
   { key: "intlLocale", name: "Intl 区域" },
+  { key: "uachHeaders", name: "UA-CH 补全" },
+  { key: "intlExtended", name: "Intl 扩展" },
   { key: "uaPlatform", name: "UA 平台伪装", desc: () => "伪装 macOS（增强）" },
   { key: "acceptLanguageHeader", name: "请求语言伪装" }
 ];
@@ -160,6 +164,9 @@ async function onFeatureToggle(e) {
   if (key === "uaPlatform") {
     await applyUaPlatformRule(e.target.checked);
   }
+  if (key === "uachHeaders") {
+    await applyUaPlatformRule(config.features.uaPlatform);
+  }
   if (key === "timezone" && e.target.checked) {
     await detectAndApply("feature");
   }
@@ -193,23 +200,45 @@ async function applyAcceptLanguageRule(enable) {
   } catch (e) {}
 }
 
-const MAC_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+// 从扩展自身真实 UA 动态推导 Mac UA / UA-CH（避免版本基准与浏览器脱节）
+function deriveMacUaInfo() {
+  const realUa = navigator.userAgent;
+  const m = /(Chrome\/(\d+)(?:\.([\d.]+))?)/i.exec(realUa);
+  const major = m ? m[2] : "131";
+  const full = m && m[3] ? major + "." + m[3] : major + ".0.0.0";
+  return {
+    ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) " + (m ? m[1] : "Chrome/131.0.0.0") + " Safari/537.36",
+    major: major,
+    fullVersionList: [
+      { brand: "Google Chrome", version: full },
+      { brand: "Chromium", version: full },
+      { brand: "Not_A Brand", version: "24.0.0.0" }
+    ],
+    platformVersion: "14.5.0"
+  };
+}
 
 async function applyUaPlatformRule(enable) {
   try {
     if (enable) {
+      const info = deriveMacUaInfo();
+      const headers = [
+        { header: "User-Agent", operation: "set", value: info.ua },
+        { header: "Sec-CH-UA", operation: "set", value: "\"Google Chrome\";v=\"" + info.major + "\", \"Chromium\";v=\"" + info.major + "\", \"Not_A Brand\";v=\"24\"" },
+        { header: "Sec-CH-UA-Platform", operation: "set", value: "\"macOS\"" }
+      ];
+      if (config.features.uachHeaders) {
+        headers.push(
+          { header: "Sec-CH-UA-Mobile", operation: "set", value: "?0" },
+          { header: "Sec-CH-UA-Platform-Version", operation: "set", value: info.platformVersion },
+          { header: "Sec-CH-UA-Full-Version-List", operation: "set", value: "\"Google Chrome\";v=\"" + info.fullVersionList[0].version + "\", \"Chromium\";v=\"" + info.fullVersionList[1].version + "\", \"Not_A Brand\";v=\"24.0.0.0\"" }
+        );
+      }
       await chrome.declarativeNetRequest.updateDynamicRules({
         addRules: [{
           id: 100,
           priority: 2,
-          action: {
-            type: "modifyHeaders",
-            requestHeaders: [
-              { header: "User-Agent", operation: "set", value: MAC_UA },
-              { header: "Sec-CH-UA", operation: "set", value: "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"" },
-              { header: "Sec-CH-UA-Platform", operation: "set", value: "\"macOS\"" }
-            ]
-          },
+          action: { type: "modifyHeaders", requestHeaders: headers },
           condition: {
             urlFilter: "http",
             resourceTypes: ["main_frame", "sub_frame", "xmlhttprequest", "script", "stylesheet", "image", "font", "media", "websocket", "other"]

@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
   <img src="extension/icons/icon128.png" width="128" alt="Fuck Claude Detection">
   <h1>Fuck Claude Detection</h1>
   <p>浏览器环境属性本地伪装扩展 · Chrome MV3</p>
@@ -22,6 +22,8 @@
 | WebRTC 拦截 | 独立原型链防逃逸 + iceServers 清空 + ICE 候选拦截 + getConfiguration 一致化 |
 | Intl 区域 | 对常用 Intl 构造器注入目标 locale，使格式化行为与报告值一致 |
 | 请求语言伪装 | DNR 改写 Accept-Language 请求头 |
+| UA-CH 补全 | UA 平台伪装开启时补全 Sec-CH-UA-Mobile / Platform-Version / Full-Version-List（版本随当前浏览器动态） |
+| Intl 扩展 | Intl.Locale 与 Intl.DurationFormat 构造器 locale 注入 |
 | UA 平台伪装（增强，默认关） | JS 层根据当前浏览器 UA 推导 macOS UA/UA-CH；网络层通过 DNR 同步关键请求头。网络层实现存在版本基准限制 |
 
 **总开关**：一键全开/全关，与子开关实时联动（任一子项开启即视为非全关）。
@@ -38,34 +40,6 @@
 
 > 需要支持 Manifest V3、declarativeNetRequest 和 MAIN world content scripts 的 Chromium 浏览器（清单声明最低 Chrome 111）。安装时浏览器会提示"读取和更改您在所有网站上的数据"——用于页面环境注入与请求头改写，详见[权限说明](#权限说明)。
 
-## 覆盖矩阵
-
-覆盖类型：**✅ 默认覆盖**（开关开启即生效）/ **⚠ 条件或部分覆盖**（结果取决于运行平台）/ **⚙ 增强后覆盖**（需开启 UA 平台伪装）/ **— 原生无风险**（普通桌面 Chrome 环境无匹配）。"— / ⚙"表示普通桌面 Chrome 原生环境无匹配，非原生环境需启用 UA 平台伪装。
-
-| 信号 | 权重 | 扩展对策 | 覆盖 |
-|------|-----:|---------|:---:|
-| 时区 | 24 | Intl.DateTimeFormat 构造器注入 timeZone；resolvedOptions 强制返回 | ✅ |
-| 语言 | 18 | navigator.languages/language 冻结副本 `['en-US', 'en']` | ✅ |
-| 字体 | 14 | measureText 剔除 + document.fonts.check 拦截（55 项名单，大小写无关） | ✅ |
-| 厂商字体 | 10 | 同上通道覆盖全部厂商字体名单 | ✅ |
-| WebRTC | 10 | 独立原型链 + iceServers 清空 + 候选拦截 + getConfiguration 一致化 | ✅ |
-| 浏览器标识 | 8 | 原生 Chrome 无匹配；非原生 UA 环境需启用 UA 平台伪装 | — / ⚙ |
-| 设备品牌 | 6 | 原生桌面 Chrome 无匹配；需启用 UA 平台伪装 | — / ⚙ |
-| Intl 区域 | 4 | Intl 构造器注入目标 locale；resolvedOptions 强制返回 | ✅ |
-| 时区偏移 | 3 | 按目标时区对每个时间戳动态计算（非 UTC+8 即 0 分） | ✅ |
-| Emoji 风格 | 3 | 取决于平台：Windows 0.4 / Apple 0.25 / Linux 0.5；UA 平台伪装可归为 Apple | ⚠ |
-
-## 验证数据
-
-| 口径 | 结果 |
-|------|-----:|
-| 检测器客户端完整扫描 | **1 / 100** |
-| 检测器服务端接口 | **约 2 / 100** |
-
-- 取整规则：检测器对每项贡献先 `Math.round(score × weight)` 再累加
-- Emoji 各平台显示分：Windows 0.4×3=1.2 → **1**；Apple 0.25×3=0.75 → **1**；Linux 0.5×3=1.5 → **2**
-- 测试环境：Chrome 桌面版（构建号未记录）+ Windows + 美国代理出口；检测器版本 commit `bb00158`
-
 ## 权限说明
 
 | 权限 / 声明 | 用途 |
@@ -78,16 +52,10 @@
 ## 已知限制
 
 - **页面主环境注入方式不覆盖 Worker**：Dedicated / Shared / Service Worker 属于独立执行环境，当前检测器未使用该路径
-- **UA 平台伪装仅改变可观察的平台标识与 UA-CH 字段**，不改变渲染特征、平台 API、硬件指纹；网络层 Sec-CH-UA 头存在固定版本基准
+- **UA 平台伪装仅改变可观察的平台标识与 UA-CH 字段**，不改变渲染特征、平台 API、硬件指纹
 - **MAIN world hook 暴露在页面环境中**：页面理论上可通过原型链、函数属性或 toString 观察修改痕迹
 - **字体拦截作用于查询通道**：真实文本渲染仍使用系统中文字体；Canvas 像素哈希、DOM 实测宽度等渲染级检测不在覆盖范围
 - **IP 地理信号由出口 IP 决定**：必须依靠目标地区代理，扩展无法改写
-
-## 隐私
-
-- 扩展配置保存在 chrome.storage.local；检测结果仅在本地 Popup 与页面之间交换，不上传
-- 代理时区检测会向 [ipwho.is](https://ipwho.is/) 发起 HTTPS 请求；该请求包含普通网络请求元数据，响应包含出口 IP 的地理与时区信息
-- WebRTC 拦截关闭且打开面板自查时，会向默认 STUN 服务器发起探测（用于本地判断候选地址泄漏）；拦截开启时不产生该请求
 
 ## 文档
 

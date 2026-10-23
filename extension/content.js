@@ -44,6 +44,7 @@
       fonts: true,
       webrtc: true,
       intlLocale: true,
+      intlExtended: false,
       uaPlatform: false
     }
   };
@@ -137,6 +138,22 @@
     } catch (e) {}
   });
 
+  // ---------- 3b. Intl.Locale / DurationFormat（由 intlExtended 开关控制） ----------
+  ["Locale", "DurationFormat"].forEach((name) => {
+    try {
+      const Orig = Intl[name];
+      if (typeof Orig !== "function") return;
+      const Patched = function (...args) {
+        if (state.features.intlExtended && (args[0] === undefined || args[0] === null || args[0] === "")) {
+          args[0] = state.locale;
+        }
+        return new Orig(...args);
+      };
+      Patched.prototype = Orig.prototype;
+      keepName(Patched, name);
+      Intl[name] = Patched;
+    } catch (e) {}
+  });
   // ---------- 4. Date.getTimezoneOffset：按时间戳动态计算 ----------
   const patchedGTO = function getTimezoneOffset() {
     if (!tzActive()) return origGTO.call(this);
@@ -488,7 +505,7 @@
       if (typeof cfg.locale === "string" && cfg.locale) state.locale = cfg.locale;
       if (Array.isArray(cfg.langs) && cfg.langs.length) state.langs = Object.freeze(cfg.langs.slice());
       if (cfg.features && typeof cfg.features === "object") {
-        ["timezone", "language", "fonts", "webrtc", "intlLocale", "uaPlatform"].forEach((k) => {
+        ["timezone", "language", "fonts", "webrtc", "intlLocale", "intlExtended", "uaPlatform"].forEach((k) => {
           if (typeof cfg.features[k] === "boolean") state.features[k] = cfg.features[k];
         });
       }
