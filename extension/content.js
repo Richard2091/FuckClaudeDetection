@@ -44,7 +44,6 @@
       fonts: true,
       webrtc: true,
       intlLocale: true,
-      intlExtended: false,
       uaPlatform: false
     }
   };
@@ -138,13 +137,13 @@
     } catch (e) {}
   });
 
-  // ---------- 3b. Intl.Locale / DurationFormat（由 intlExtended 开关控制） ----------
+  // ---------- 3b. Intl.Locale / DurationFormat（跟随 intlLocale 开关） ----------
   ["Locale", "DurationFormat"].forEach((name) => {
     try {
       const Orig = Intl[name];
       if (typeof Orig !== "function") return;
       const Patched = function (...args) {
-        if (state.features.intlExtended && (args[0] === undefined || args[0] === null || args[0] === "")) {
+        if (intlActive() && (args[0] === undefined || args[0] === null || args[0] === "")) {
           args[0] = state.locale;
         }
         return new Orig(...args);
@@ -287,7 +286,7 @@
     try { if (window.webkitRTCPeerConnection) window.webkitRTCPeerConnection = PatchedRTC; } catch (e) {}
   })();
 
-  // ---------- 9. UA 平台伪装（可选增强，默认关） ----------
+  // ---------- 9. UA 平台（可选增强，默认关） ----------
   // 从真实 UA 动态推导 Mac UA：保留真实 Chrome 主版本，仅替换平台段（避免版本脱节）
   function deriveMacUa(realUa) {
     const m = /(Chrome\/(\d+)[\d.]*)/i.exec(realUa || "");
@@ -505,7 +504,7 @@
       if (typeof cfg.locale === "string" && cfg.locale) state.locale = cfg.locale;
       if (Array.isArray(cfg.langs) && cfg.langs.length) state.langs = Object.freeze(cfg.langs.slice());
       if (cfg.features && typeof cfg.features === "object") {
-        ["timezone", "language", "fonts", "webrtc", "intlLocale", "intlExtended", "uaPlatform"].forEach((k) => {
+        ["timezone", "language", "fonts", "webrtc", "intlLocale", "uaPlatform"].forEach((k) => {
           if (typeof cfg.features[k] === "boolean") state.features[k] = cfg.features[k];
         });
       }

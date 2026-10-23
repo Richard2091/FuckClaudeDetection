@@ -16,22 +16,18 @@ const DEFAULT_CONFIG = {
     webrtc: true,
     intlLocale: true,
     acceptLanguageHeader: true,
-    uaPlatform: false,
-    uachHeaders: false,
-    intlExtended: false
+    uaPlatform: false
   }
 };
 
 const FEATURES = [
   { key: "timezone", name: "时区伪装" },
   { key: "language", name: "浏览器语言" },
+  { key: "acceptLanguageHeader", name: "请求语言" },
   { key: "fonts", name: "中文字体拦截" },
   { key: "webrtc", name: "WebRTC 拦截" },
   { key: "intlLocale", name: "Intl 区域" },
-  { key: "uachHeaders", name: "UA-CH 补全" },
-  { key: "intlExtended", name: "Intl 扩展" },
-  { key: "uaPlatform", name: "UA 平台伪装", desc: () => "伪装 macOS（增强）" },
-  { key: "acceptLanguageHeader", name: "请求语言伪装" }
+  { key: "uaPlatform", name: "UA 平台", desc: () => "伪装 macOS（增强）" }
 ];
 
 const AUTO_DETECT_COOLDOWN = 60 * 1000;
@@ -42,6 +38,17 @@ let lastAutoDetectTs = 0;
 let detecting = false;
 
 function $(id) { return document.getElementById(id); }
+
+function initializeBrandVersion() {
+  try {
+    const manifest = chrome.runtime.getManifest();
+    $("brandVersion").href = manifest.homepage_url || $("brandVersion").href;
+    const version = manifest.version;
+    $("brandVersion").textContent = `V${version}`;
+  } catch (e) {
+    $("brandVersion").textContent = "V0.0.0";
+  }
+}
 function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -105,14 +112,12 @@ function saveConfig() {
 }
 
 // ---------- 总开关联动 ----------
-function allOn() { return FEATURES.every((f) => config.features[f.key]); }
+function anyOn() { return FEATURES.some((f) => config.features[f.key]); }
 function allOff() { return FEATURES.every((f) => !config.features[f.key]); }
 
 function syncMaster() {
   const cb = $("masterCheckbox");
-  // 只有全部子选项开启时总开关才显示开启，否则一律关闭（无中间态）
-  cb.checked = allOn();
-  cb.indeterminate = false;
+  cb.checked = anyOn();
 }
 
 // ---------- 行 DOM ----------
@@ -163,9 +168,6 @@ async function onFeatureToggle(e) {
   }
   if (key === "uaPlatform") {
     await applyUaPlatformRule(e.target.checked);
-  }
-  if (key === "uachHeaders") {
-    await applyUaPlatformRule(config.features.uaPlatform);
   }
   if (key === "timezone" && e.target.checked) {
     await detectAndApply("feature");
@@ -225,15 +227,11 @@ async function applyUaPlatformRule(enable) {
       const headers = [
         { header: "User-Agent", operation: "set", value: info.ua },
         { header: "Sec-CH-UA", operation: "set", value: "\"Google Chrome\";v=\"" + info.major + "\", \"Chromium\";v=\"" + info.major + "\", \"Not_A Brand\";v=\"24\"" },
-        { header: "Sec-CH-UA-Platform", operation: "set", value: "\"macOS\"" }
+        { header: "Sec-CH-UA-Platform", operation: "set", value: "\"macOS\"" },
+        { header: "Sec-CH-UA-Mobile", operation: "set", value: "?0" },
+        { header: "Sec-CH-UA-Platform-Version", operation: "set", value: info.platformVersion },
+        { header: "Sec-CH-UA-Full-Version-List", operation: "set", value: "\"Google Chrome\";v=\"" + info.fullVersionList[0].version + "\", \"Chromium\";v=\"" + info.fullVersionList[1].version + "\", \"Not_A Brand\";v=\"24.0.0.0\"" }
       ];
-      if (config.features.uachHeaders) {
-        headers.push(
-          { header: "Sec-CH-UA-Mobile", operation: "set", value: "?0" },
-          { header: "Sec-CH-UA-Platform-Version", operation: "set", value: info.platformVersion },
-          { header: "Sec-CH-UA-Full-Version-List", operation: "set", value: "\"Google Chrome\";v=\"" + info.fullVersionList[0].version + "\", \"Chromium\";v=\"" + info.fullVersionList[1].version + "\", \"Not_A Brand\";v=\"24.0.0.0\"" }
-        );
-      }
       await chrome.declarativeNetRequest.updateDynamicRules({
         addRules: [{
           id: 100,
@@ -381,7 +379,7 @@ async function refreshLivePanel(options) {
     timezone: p.timezone,
     language: (p.langs || []).join(", "),
     fonts: p.fontsIntercepted ? "已拦截" : ((p.leakedFonts && p.leakedFonts.length) ? p.leakedFonts.join(", ") : "无泄漏"),
-    webrtc: (config.features.webrtc) ? "已拦截" : ((p.realWebrtcLeak && p.realWebrtcLeak.length) ? "泄漏: " + p.realWebrtcLeak.join(", ") : ((p.realWebrtcLeak && p.realWebrtcLeak.length === 0) ? "无泄漏" : "未拦截")),
+    webrtc: (config.features.webrtc) ? "已拦截" : ((p.realWebrtcLeak && p.realWebrtcLeak.length) ? p.realWebrtcLeak.join(", ") : ((p.realWebrtcLeak && p.realWebrtcLeak.length === 0) ? "无泄漏" : "未拦截")),
     intlLocale: p.locale,
     uaPlatform: p.uaPlatformValue || "",
     acceptLanguageHeader: (config.features.acceptLanguageHeader) ? (config.langs || []).join(", ") : ((p.realLangs && p.realLangs.length) ? p.realLangs.join(", ") : "浏览器原始语言")
@@ -406,6 +404,7 @@ async function refreshLivePanel(options) {
 }
 
 // ---------- 初始化 ----------
+initializeBrandVersion();
 (async () => {
   await loadConfig();
   $("currentTz").textContent = config.timezone;
@@ -417,3 +416,4 @@ async function refreshLivePanel(options) {
   await applyUaPlatformRule(config.features.uaPlatform);
   refreshLivePanel();
 })();
+

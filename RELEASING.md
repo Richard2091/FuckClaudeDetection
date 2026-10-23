@@ -81,5 +81,5 @@ gh release create $ver --title "Fuck Claude Detection $ver" --notes-file release
 ## 6. 已知注意事项
 
 - Firefox 版为 MV3 实验性支持（DNR 子集），Release notes 必须保留"未充分测试"标注
-- UA 平台伪装的 UA 版本从真实浏览器 UA 动态推导（`deriveMacUa`），升级无需手动维护版本号
+- UA 平台的 UA 版本从真实浏览器 UA 动态推导（`deriveMacUa`），升级无需手动维护版本号
 - `ipwho.is` 为外部依赖；若不可用，代理时区检测失败时保持当前时区不变

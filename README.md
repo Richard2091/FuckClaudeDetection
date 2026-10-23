@@ -22,9 +22,9 @@
 | WebRTC 拦截 | 独立原型链防逃逸 + iceServers 清空 + ICE 候选拦截 + getConfiguration 一致化 |
 | Intl 区域 | 对常用 Intl 构造器注入目标 locale，使格式化行为与报告值一致 |
 | 请求语言伪装 | DNR 改写 Accept-Language 请求头 |
-| UA-CH 补全 | UA 平台伪装开启时补全 Sec-CH-UA-Mobile / Platform-Version / Full-Version-List（版本随当前浏览器动态） |
+| UA-CH 补全 | UA 平台开启时补全 Sec-CH-UA-Mobile / Platform-Version / Full-Version-List（版本随当前浏览器动态） |
 | Intl 扩展 | Intl.Locale 与 Intl.DurationFormat 构造器 locale 注入 |
-| UA 平台伪装（增强，默认关） | JS 层根据当前浏览器 UA 推导 macOS UA/UA-CH；网络层通过 DNR 同步关键请求头。网络层实现存在版本基准限制 |
+| UA 平台（增强，默认关） | JS 层根据当前浏览器 UA 推导 macOS UA/UA-CH；网络层通过 DNR 同步关键请求头。网络层实现存在版本基准限制 |
 
 **总开关**：一键全开/全关，与子开关实时联动（任一子项开启即视为非全关）。
 
