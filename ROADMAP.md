@@ -38,3 +38,14 @@
 
 - 所有伪装手段保持**可逆**且**用户可感知**（UI 开关）
 - 不触碰账号安全红线：IP 信誉、付款方式、账号历史是 Claude 真正的风控维度，本工具箱只处理"环境指纹"层
+## 已知边界（交叉审核确认）
+
+以下边界经双代理交叉审核确认，属当前架构的能力范围之外，暂不整改：
+
+1. **IP 地理信号**（x-vercel-ip-timezone / x-vercel-ip-country）：由出口 IP 决定，DNR 无法可靠改写，必须依靠目标地区代理
+2. **Web Worker / Shared Worker / Service Worker**：独立 JS realm，content script 无法注入（当前检测站未使用，未来对抗面）
+3. **渲染层指纹**：拦截的是 measureText 探测层，真实文本渲染仍使用系统中文字体；像素哈希 / document.fonts.check / FontFace 未覆盖
+4. **MAIN world hook 可观察性**：hook 天然暴露在页面环境中（页面可检测 toString / 原型链），无法绝对不可检测
+5. **TLS / HTTP2 指纹**：需代理层解决
+6. **仅改 UA 不等于完整 macOS 环境**：真实平台伪装还牵涉渲染特征、平台 API 与硬件指纹
+7. **服务端评分口径**：/api/check 仅测 62 权重信号并归一化（干净 Windows + 美国代理约 2/100）；港澳时区在服务端的显示影响大于客户端的 14 分直观值
