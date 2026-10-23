@@ -31,6 +31,18 @@
 3. **时区伪装层可行性评估**
 4. **共享配置**：规划中由 extension、CLI 与 desktop 共享同一套时区/区域目标档案（该能力尚未实现）
 
+
+## 延后实施：Date 本地时区链路
+
+当前已覆盖 `getTimezoneOffset()`（按时间戳动态计算，含夏令时）与 `toString` / `toTimeString` / `toLocale*` 的时区标注，但 `Date.prototype` 的本地时间 getter（`getHours` / `getDate` / `getDay` / `getMonth` / `getFullYear` / `getMinutes` / `getSeconds` / `toDateString`）仍返回宿主时区值。未来检测可交叉比对本地字段与 Intl 格式化时间发现不一致。
+
+延后原因：
+
+- 本地字段按目标时区重写涉及月/日跨边界换算与 `setHours` 等 setter 的对称语义，实现复杂度高
+- 覆盖后页面可见时间将变为目标时区，属于用户可感知的行为变化
+- 当前公开检测器不读取本地字段，仅作未来一致性校验防御
+
+实现时建议拆阶段：先补 `getTimezoneOffset` 的按时间戳计算（已完成）与关键本地 getter，不一次性替换完整 `Date`。
 ## 非目标
 
 本项目只处理浏览器或应用环境中的可配置属性。以下内容不在处理范围内：
