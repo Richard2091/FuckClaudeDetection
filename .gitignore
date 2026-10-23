@@ -2,3 +2,5 @@ scripts/
 legacy/
 *.log
 extension/_metadata/
+*.pem
+*.key
