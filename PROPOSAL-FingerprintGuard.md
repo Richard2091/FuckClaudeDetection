@@ -1,4 +1,4 @@
-﻿# PROPOSAL: Fingerprint Guard 指纹守卫 — 通用仓库规划
+# PROPOSAL: Fingerprint Guard 指纹守卫 — 通用仓库规划
 
 > 状态：规划文档（未实施）
 > 目标：新建通用仓库 `FingerprintGuard`（干净起步，不含任何 Claude 品牌）
@@ -39,7 +39,8 @@
 
 ```jsonc
 {
-  "preset": "us",                // us | jp | kr | de | fr | uk | sg | tw | custom
+  "preset": "us",                // us | jp | kr | de | fr | uk | sg | tw | custom | custom-<id>
+  "scope": "global",             // 作用域：global（全局）| tab（仅当前标签页）
   "timezone": "America/New_York",
   "locale": "en-US",
   "langs": ["en-US", "en"],
@@ -55,9 +56,21 @@
 }
 ```
 
+另存于 storage 顶层（不随单份配置导出，见 §11 预设管理）：
+
+```jsonc
+{
+  "customPresets": [              // 用户自定义预设（可添加/删除/导入/导出）
+    { "id": "custom-1730000000000", "name": "我的预设", "timezone": "...", "locale": "...", "langs": ["..."] }
+  ]
+}
+```
+
 - 选择内置预设 → 自动填充 timezone / locale / langs（三项在 UI 中只读）
 - 切换为 `custom` → 三项解锁为可编辑
 - `features` 各开关始终独立可操作
+- **自动切换 custom**：preset 非 custom 时，用户手动修改 timezone / locale / langs 任一项且与预设值不一致 → `preset` 自动变为 `custom`（下拉显示"自定义"）；将值改回与某预设一致时**不自动切回**（避免抖动），由用户在预设下拉手动选回
+- 子开关（features）状态与预设**解耦**：切换 features 不触发 preset 变化
 
 ---
 
@@ -149,6 +162,10 @@
 | 6 | 时区选择器（分组 + 搜索） | popup.html、popup.css、popup.js | 中 |
 | 7 | 自定义模式解锁三项编辑 + 一致性提示 | popup.js、popup.css | 中 |
 | 8 | GitHub 仓库信息维护：description、topics、social preview 图标 | gh CLI | 小 |
+| 9 | 作用域（全局/单标签）：动态注入 + DNR session rules（tabIds 条件）+ 切换撤销流程 | background.js、popup、content | 大 |
+| 10 | 预设管理：添加/删除/导入/导出（customPresets 存储 + 管理面板） | popup/presets.js、popup.js、popup.html | 中 |
+| 11 | 代理时区自动检测（⟳ 检测出口 IP 时区并自动应用，含 loading/扫光动效与冷却） | popup.js | 小 |
+| 12 | 动效规范落地：下拉/面板展开收起过渡（见 §12） | popup.css | 小 |
 
 ---
 
@@ -160,3 +177,64 @@
 | `FingerprintGuard`（新仓库） | 通用版，美国为默认预设 | 主力演进 |
 
 两版引擎代码同源，安全修复建议同步。用户从 Claude 专项版切换到通用版：默认值相同（美国档案），体验无缝。
+
+
+---
+
+## 10. 作用域（Scope）
+
+伪装注入的作用范围，二选一：
+
+| 作用域 | 含义 | 技术实现 | 适用场景 |
+| --- | --- | --- | --- |
+| **全局**（默认） | 所有标签页的所有页面均注入伪装 | manifest 静态 `content_scripts`（现有架构）+ DNR 静态规则改写 Accept-Language | 日常全浏览器使用 |
+| **单标签** | 仅当前标签页生效，其他标签页不受影响 | `chrome.scripting.executeScript` 按需动态注入；用 `chrome.storage.session` 记录已注入 tabId 集合；Accept-Language 头改用 `declarativeNetRequest` **session rules** + `condition.tabIds`（仅命中指定标签页） | 临时验证伪装效果、不影响工作标签页 |
+
+- 配置字段：`scope: "global" | "tab"`
+- **切换行为**：
+  - 全局 → 单标签：提示"其他标签页将在刷新后恢复真实环境"，当前标签页保持伪装并转为动态注入托管
+  - 单标签 → 全局：清除 session rules 与动态注入状态，全站刷新后生效
+- **UI**：伪装功能区顶部"作用域 `[ 全局 ▼ ]`"，展开两个选项各带一行说明（如上表"含义"列）
+- **诚实标注的技术边界**：Web Worker 内的脚本无法注入（MV3 限制），单标签与全局模式均不覆盖 Worker 场景
+
+## 11. 每项独立配置与预设管理
+
+### 11.1 每项独立配置（自定义模式）
+
+- `custom` 模式下 `timezone` / `locale` / `langs` 三项**完全解耦**，可任意组合（如东京时区 + en-US 语言），配合 §5 一致性提示给出黄字提醒
+- `features` 子开关独立于预设值，随时可单独切换
+
+### 11.2 预设管理（添加 / 删除 / 导入 / 导出）
+
+| 操作 | 说明 | 约束 |
+| --- | --- | --- |
+| **添加** | 将当前 timezone/locale/langs（可选含 features）保存为新预设，弹窗命名 | 名称非空、去重 |
+| **删除** | 删除自定义预设 | 内置 9 项锁定不可删；删除当前正在使用的预设时先切回 `us` |
+| **导出** | 单个预设或全部自定义预设 → JSON 文件：`{ "version": 1, "exportedAt": "...", "presets": [...] }` | — |
+| **导入** | 选择 JSON → schema 校验 → 重名策略三选一（覆盖 / 自动重命名 / 跳过） | 校验失败项逐条报告 |
+
+- 存储：`chrome.storage.local` 的 `customPresets: Preset[]`
+- UI：预设下拉分两组展示（**内置预设** / **我的预设**），下拉尾部固定入口"＋ 保存为预设"与"管理预设…"
+- 管理面板：自定义预设列表（名称、时区摘要、导出/删除操作）+ 底部导入按钮
+
+### 11.3 Schema 摘要
+
+见 §3（`scope` 与 `customPresets` 已纳入）。
+
+## 12. 动效规范
+
+所有展开/收起类交互（时区选择器、作用域选择、预设管理面板）统一：
+
+| 项 | 规范 |
+| --- | --- |
+| 展开 | `scale(0.96) → scale(1)` + `opacity(0 → 1)`，180ms `cubic-bezier(0.2, 0.8, 0.2, 1)`（ease-out） |
+| 收起 | `scale(1) → scale(0.96)` + `opacity(1 → 0)`，140ms `ease-in` |
+| transform-origin | 顶部左侧（与触发控件对齐） |
+| 无障碍 | 尊重 `prefers-reduced-motion: reduce`：动画时长降为 0，直接切换 |
+| 风格 | 与整体深色主题一致（面板色、边框色沿用 CSS 变量） |
+
+## 13. 代理时区自动检测（自 Claude 版迁移）
+
+- 入口：代理时区行右侧 ⟳ 图标（手动）+ 开启"时区伪装"或总开关全开时自动触发一次（60s 冷却）
+- 逻辑：请求 `ipwho.is` 获取出口 IP 时区 → 自动应用为 `timezone` → 时区值播放从左至右扫光动效
+- 状态反馈：检测中时区值脉冲 + 图标旋转；失败时值短暂变红（悬停显示原因），无弹窗
