@@ -9,3 +9,4 @@ extension/_metadata/
 *.crx
 *.xpi
 *-mv3.zip
+*.zip
