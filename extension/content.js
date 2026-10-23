@@ -496,6 +496,11 @@
       out.yaHeiLeak = out.leakedFonts.length > 0;
       out.webrtcPatched = typeof RTCPeerConnection !== "undefined" && RTCPeerConnection.toString().indexOf("[native code]") === -1;
       out.uaPlatformActive = uaActive();
+      // UA 当前值（hook 下自动反映伪装/真实状态）
+      out.uaPlatformValue = String(navigator.userAgent);
+      out.uaPlatformName = uaActive() ? "macOS (MacIntel)" : (origPlatformDesc ? origPlatformDesc.get.call(navigator) : "unknown");
+      // 真实浏览器语言（原生引用，永不受语言伪装影响；≈ 真实 Accept-Language）
+      out.realLangs = Array.from(origLangsDesc.get.call(navigator));
     } catch (e) {
       out.error = String(e && e.message);
     }

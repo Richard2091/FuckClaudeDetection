@@ -42,6 +42,40 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// 点击信息区复制完整内容；复制成功短暂反馈后恢复
+function copySub(el) {
+  if (el.classList.contains("loading")) return;
+  const text = el.textContent;
+  if (!text) return;
+  const showCopied = () => {
+    el.classList.add("copied");
+    const prev = el.textContent;
+    el.textContent = "已复制";
+    setTimeout(() => {
+      el.classList.remove("copied");
+      el.textContent = prev;
+    }, 900);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showCopied).catch(() => {
+      // 后备方案：execCommand
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); showCopied(); } catch (e) {}
+      ta.remove();
+    });
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); showCopied(); } catch (e) {}
+    ta.remove();
+  }
+}
+
 // ---------- 配置 ----------
 function deepMerge(base, over) {
   Object.keys(over || {}).forEach((k) => {
@@ -93,9 +127,10 @@ function buildRows() {
           '<span class="slider"></span>' +
         '</label>' +
       '</div>' +
-      '<div class="feature-sub" id="sub-' + f.key + '"></div>';
+      '<div class="feature-sub" id="sub-' + f.key + '" title=""></div>';
     list.appendChild(row);
     row.querySelector("input").addEventListener("change", onFeatureToggle);
+    row.querySelector(".feature-sub").addEventListener("click", function () { copySub(this); });
   });
 }
 
@@ -128,7 +163,7 @@ async function onFeatureToggle(e) {
   if (key === "timezone" && e.target.checked) {
     await detectAndApply("feature");
   }
-  refreshLivePanel();
+  refreshLivePanel({ loadingRows: [key] });
 }
 
 // ---------- 总开关（一键全开/全关） ----------
@@ -245,7 +280,7 @@ async function detectAndApply(source) {
         await saveConfig();
         tzEl.textContent = r.tz;
         markGreaterCnTz(r.tz);
-        refreshLivePanel();
+        refreshLivePanel({ loadingRows: ["timezone"] });
       }
       void tzEl.offsetWidth;
       tzEl.classList.add("shine");
@@ -267,13 +302,19 @@ async function detectAndApply(source) {
 $("refreshTzBtn").addEventListener("click", () => detectAndApply("manual"));
 
 // ---------- 实时参数 ----------
-async function refreshLivePanel(retry = true) {
+async function refreshLivePanel(options) {
+  const opts = options || {};
+  const retry = opts.retry !== false;
+  // 只让受影响的行进入 loading；未受影响的行静默保持
+  const loadingSet = new Set(opts.loadingRows || FEATURES.map((f) => f.key));
   FEATURES.forEach((f) => {
     const sub = $("sub-" + f.key);
     if (!sub) return;
-    sub.classList.add("loading");
-    sub.classList.remove("bad");
-    sub.textContent = "";
+    if (loadingSet.has(f.key)) {
+      sub.classList.add("loading");
+      sub.classList.remove("bad");
+      sub.textContent = "";
+    }
   });
 
   let p = null;
@@ -294,7 +335,7 @@ async function refreshLivePanel(retry = true) {
   if (injectError) {
     if (retry) {
       // content script 可能尚未就绪（刚刷新页面/刚加载扩展），自动重试一次
-      setTimeout(() => refreshLivePanel(false), 1200);
+      setTimeout(() => refreshLivePanel({ retry: false, loadingRows: opts.loadingRows }), 1200);
       return;
     }
     FEATURES.forEach((f) => {
@@ -302,6 +343,7 @@ async function refreshLivePanel(retry = true) {
       if (!sub) return;
       sub.classList.remove("loading");
       sub.textContent = "未注入 · 请刷新页面后重试";
+      sub.title = "当前页面无法读取（chrome:// 页面或扩展重载后未刷新）";
     });
     return;
   }
@@ -310,10 +352,10 @@ async function refreshLivePanel(retry = true) {
     timezone: p.timezone,
     language: (p.langs || []).join(", "),
     fonts: p.fontsIntercepted ? "已拦截" : ((p.leakedFonts && p.leakedFonts.length) ? p.leakedFonts.join(", ") : "无泄漏"),
-    webrtc: (config.features.webrtc) ? "已拦截" : "未拦截",
+    webrtc: (config.features.webrtc) ? "已拦截" : ((p.realWebrtcLeak && p.realWebrtcLeak.length) ? "泄漏: " + p.realWebrtcLeak.join(", ") : ((p.realWebrtcLeak && p.realWebrtcLeak.length === 0) ? "无泄漏" : "未拦截")),
     intlLocale: p.locale,
-    uaPlatform: p.uaPlatformValue,
-    acceptLanguageHeader: (config.features.acceptLanguageHeader) ? (config.langs || []).join(", ") : ((p.realLangs && p.realLangs.length) ? p.realLangs.join(", ") : (config.langs || []).join(", "))
+    uaPlatform: p.uaPlatformValue || "",
+    acceptLanguageHeader: (config.features.acceptLanguageHeader) ? (config.langs || []).join(", ") : ((p.realLangs && p.realLangs.length) ? p.realLangs.join(", ") : "浏览器原始语言")
   };
 
   FEATURES.forEach((f) => {
@@ -323,12 +365,13 @@ async function refreshLivePanel(retry = true) {
     const v = vals[f.key];
     const bad = (
       (f.key === "fonts" && p.leakedFonts && p.leakedFonts.length > 0) ||
-      (f.key === "webrtc" && !p.webrtcPatched) ||
+      (f.key === "webrtc" && !config.features.webrtc && p.realWebrtcLeak && p.realWebrtcLeak.length > 0) ||
       (f.key === "timezone" && p.timezone !== config.timezone) ||
       (f.key === "language" && (p.langs || []).join(",") !== (config.langs || []).join(",")) ||
       (f.key === "intlLocale" && p.locale !== config.locale)
     );
-    sub.innerHTML = escapeHtml(v);
+    sub.textContent = v;
+    sub.title = v;
     sub.classList.toggle("bad", !!bad);
   });
 }

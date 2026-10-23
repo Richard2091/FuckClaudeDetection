@@ -149,9 +149,17 @@ body {
   font-family: Consolas, monospace;
   line-height: 1.5;
   min-height: 15px;
-  word-break: break-all;
+  /* 单行展示：超出省略号，hover 用 title 看全部，点击复制 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color 0.15s;
 }
+.feature-sub:hover { color: var(--text); }
+.feature-sub.copied { color: var(--green); animation: none; }
 .feature-sub.bad { color: var(--red); }
+.feature-sub.bad:hover { color: var(--red); }
 .feature-sub.loading { animation: subPulse 1s ease infinite; }
 .feature-sub.loading::before { content: "读取中..."; }
 @keyframes subPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
