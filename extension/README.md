@@ -2,7 +2,7 @@
 
 纯扩展方式覆盖 fuck-claude.vercel.app 检测站 10 项信号，不改动本机任何设置。经双代理交叉审核整改（覆盖矩阵 + 真实性评级）。
 
-## 预期分数
+## 验证数据（对照检测站源码）
 
 - **客户端扫描：1 / 100**（检测站对每项贡献逐项取整：emoji Windows 0.4×3=1.2 → 显示 1）
 - **服务端 /api/check：约 2 / 100**（仅测 62 权重信号并归一化）
@@ -21,7 +21,7 @@
 | deviceVendor | 6 | 同上（UA-CH 高熵值同步伪装） | ✅ |
 | intlLocale | 4 | Intl 构造器真实 locale 注入（行为与报告一致） | ✅ |
 | timezoneOffset | 3 | getTimezoneOffset 按每个 Date 时间戳动态计算（含夏令时） | ✅ |
-| emoji | 3 | Windows 固有；UA 平台伪装增强可改善 UA/UA-CH 一致性 | ⚠ 显示 1 分 |
+| emoji | 3 | 取决于平台：Windows 0.4 / Apple 0.25 / Linux 0.5；UA 平台伪装（增强）可归为 Apple 并提升 UA-CH 一致性；逐项取整规则下各平台显示分均为 1 | ⚠ |
 
 ## 功能开关
 
