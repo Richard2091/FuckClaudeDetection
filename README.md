@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
   <img src="extension/icons/icon128.png" width="128" alt="Fingerprint Guard">
   <h1>统一指纹守卫 <sub>（Fingerprint Guard）</sub></h1>
   <p>浏览器环境属性本地伪装扩展 · Chrome MV3 · 仓库代号 <code>FuckClaudeDetection</code></p>
@@ -43,13 +43,14 @@
 
 - [extension/README.md](extension/README.md) — 技术架构、覆盖矩阵、验证数据、权限与隐私说明
 - [ROADMAP.md](ROADMAP.md) — 路线图（CLI / Desktop 环境一致性工具预留）与非目标
-- [logo/](logo/) — 图标组件与 SVG 源文件（盾形轮廓由本项目绘制；白色 Claude 星芒路径参考 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标）
+- [logo/](logo/) — 图标组件与 SVG 源文件
 - [LICENSE](LICENSE) — MIT License
 - 问题反馈请使用 [GitHub Issues](https://github.com/Richard2091/FuckClaudeDetection/issues)
 
 ## 第三方声明
 
 - 白色 Claude 星芒路径参考自 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标（本项目中按需调整了颜色与尺寸）
+- 白色 Claude 星芒图形路径参考自 [lobehub/icons](https://github.com/lobehub/lobe-icons) 的 Claude 图标，本项目调整了颜色与尺寸
 - Claude 名称与相关商标归 Anthropic 所有；本项目与其无隶属关系
 
 ## 致谢
@@ -57,9 +58,7 @@
 - [LinXiaoTao/FuckClaude](https://github.com/LinXiaoTao/FuckClaude) — 公开指纹检测器实现；本项目覆盖矩阵参照其检测信号模型与 signals.ts 设计
 - [JUNSHENG428/ai-coding-anti-ban](https://github.com/JUNSHENG428/ai-coding-anti-ban) — Claude Code 检测机制逆向情报（时区/域名黑名单/关键词三层机制、设备指纹维度）
 - [TZZ520/claude-environment-check](https://github.com/TZZ520/claude-environment-check) — 区域暴露诊断的网络层维度（出口路由/TLS/WebSocket/DNS）参考
-- [lobehub/icons](https://github.com/lobehub/lobe-icons) — Claude 星芒图标路径来源
 - [ipwho.is](https://ipwho.is/) — 免费的 IP 地理与时区查询服务
-- 盾形轮廓与整体构图由作者设计
 
 ## 免责声明
 
