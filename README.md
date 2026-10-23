@@ -49,14 +49,6 @@
 | content scripts（MAIN world，所有站点） | 页面环境注入 |
 | `https://ipwho.is/` | 代理时区检测的外部查询目标 |
 
-## 已知限制
-
-- **页面主环境注入方式不覆盖 Worker**：Dedicated / Shared / Service Worker 属于独立执行环境，当前检测器未使用该路径
-- **UA 平台伪装仅改变可观察的平台标识与 UA-CH 字段**，不改变渲染特征、平台 API、硬件指纹
-- **MAIN world hook 暴露在页面环境中**：页面理论上可通过原型链、函数属性或 toString 观察修改痕迹
-- **字体拦截作用于查询通道**：真实文本渲染仍使用系统中文字体；Canvas 像素哈希、DOM 实测宽度等渲染级检测不在覆盖范围
-- **IP 地理信号由出口 IP 决定**：必须依靠目标地区代理，扩展无法改写
-
 ## 文档
 
 - [ROADMAP.md](ROADMAP.md) — 路线图（CLI / Desktop 环境一致性工具预留）与非目标
